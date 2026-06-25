@@ -41,4 +41,4 @@ CampusFlow is a comprehensive, multi-module college campus management platform d
    ```
 
 ## License
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is proprietary and confidential. All rights reserved.
