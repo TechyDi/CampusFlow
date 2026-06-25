@@ -1,0 +1,199 @@
+<%- include('partials/header') %>
+
+<div class="max-w-6xl mx-auto px-6 py-8 fade-in">
+    <div class="flex justify-between items-center mb-8">
+        <h2 class="text-3xl font-extrabold text-gray-900">Smart Attendance</h2>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-8">
+        <!-- Check-in Panel -->
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                <svg class="w-6 h-6 mr-2 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.071 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4"></path></svg>
+                Check In to Class
+            </h3>
+            
+            <p class="text-sm text-gray-600 mb-6">
+                Enter the code provided by your instructor or scan the QR code to auto-fill. 
+                <strong>Note:</strong> Geolocation is required. You must be physically present in the classroom to check in.
+            </p>
+
+            <form id="checkInForm" class="space-y-5">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Check-in Code</label>
+                    <input type="text" id="checkInCode" required maxlength="10" placeholder="e.g. DEMO5" class="w-full border border-gray-300 rounded-md px-4 py-3 text-lg font-mono uppercase focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                
+                <div id="locationStatus" class="bg-blue-50 text-blue-700 p-3 rounded-md text-sm border border-blue-100 hidden">
+                    <span class="flex items-center">
+                        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        Acquiring GPS location...
+                    </span>
+                </div>
+
+                <div id="errorMessage" class="bg-red-50 text-red-700 p-3 rounded-md text-sm border border-red-200 hidden"></div>
+                <div id="successMessage" class="bg-green-50 text-green-700 p-3 rounded-md text-sm border border-green-200 hidden"></div>
+
+                <button type="submit" id="submitBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-md transition shadow-md flex justify-center items-center">
+                    Submit Check-in
+                </button>
+            </form>
+        </div>
+
+        <!-- Active Sessions Info -->
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">Active Sessions Today</h3>
+            
+            <% if (activeSessions.length === 0) { %>
+                <div class="text-center py-8 bg-gray-50 rounded-lg border border-gray-100">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    <p class="mt-2 text-sm text-gray-500 font-medium">No active sessions right now.</p>
+                </div>
+            <% } else { %>
+                <div class="space-y-4">
+                    <% activeSessions.forEach(session => { %>
+                        <div class="p-4 border border-indigo-100 bg-indigo-50/30 rounded-lg flex justify-between items-center">
+                            <div>
+                                <h4 class="font-bold text-gray-900"><%= session.course.code %>: <%= session.course.name %></h4>
+                                <p class="text-xs text-gray-500 mt-1">Started <%= new Date(session.date).toLocaleTimeString() %></p>
+                            </div>
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                Live
+                            </span>
+                        </div>
+                    <% }) %>
+                </div>
+            <% } %>
+        </div>
+    </div>
+
+    <!-- Past Attendance -->
+    <div class="mt-12 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="px-6 py-5 border-b border-gray-100 bg-gray-50">
+            <h3 class="text-lg font-bold text-gray-800">My Attendance History</h3>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Course</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date & Time</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    <% if (pastRecords.length === 0) { %>
+                        <tr>
+                            <td colspan="3" class="px-6 py-8 text-center text-sm text-gray-500">No attendance records found.</td>
+                        </tr>
+                    <% } else { %>
+                        <% pastRecords.forEach(record => { %>
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-sm font-bold text-gray-900"><%= record.session.course.code %></div>
+                                    <div class="text-xs text-gray-500"><%= record.session.course.name %></div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-sm text-gray-900"><%= new Date(record.timestamp).toLocaleDateString() %></div>
+                                    <div class="text-xs text-gray-500"><%= new Date(record.timestamp).toLocaleTimeString() %></div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                        Present
+                                    </span>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    <% } %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Auto-fill from QR code URL parameter
+    document.addEventListener("DOMContentLoaded", () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        if (code) {
+            document.getElementById('checkInCode').value = code;
+        }
+    });
+
+    document.getElementById('checkInForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const btn = document.getElementById('submitBtn');
+        const errDiv = document.getElementById('errorMessage');
+        const sucDiv = document.getElementById('successMessage');
+        const locDiv = document.getElementById('locationStatus');
+        
+        btn.disabled = true;
+        btn.classList.add('opacity-70');
+        errDiv.classList.add('hidden');
+        sucDiv.classList.add('hidden');
+        locDiv.classList.remove('hidden');
+
+        const checkInCode = document.getElementById('checkInCode').value.trim();
+
+        // 1. Get Geolocation
+        if (!navigator.geolocation) {
+            locDiv.classList.add('hidden');
+            errDiv.textContent = "Geolocation is not supported by your browser.";
+            errDiv.classList.remove('hidden');
+            btn.disabled = false;
+            btn.classList.remove('opacity-70');
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                locDiv.classList.add('hidden');
+
+                // 2. Send Check-in Request
+                try {
+                    const response = await fetch('/api/attendance/checkin', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ checkInCode, lat, lng })
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        sucDiv.textContent = data.message;
+                        sucDiv.classList.remove('hidden');
+                        setTimeout(() => window.location.reload(), 2000);
+                    } else {
+                        errDiv.textContent = data.error || 'Check-in failed.';
+                        errDiv.classList.remove('hidden');
+                        btn.disabled = false;
+                        btn.classList.remove('opacity-70');
+                    }
+                } catch (err) {
+                    errDiv.textContent = "Network error. Try again.";
+                    errDiv.classList.remove('hidden');
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-70');
+                }
+            },
+            (error) => {
+                locDiv.classList.add('hidden');
+                let msg = "Could not get your location.";
+                if(error.code === 1) msg = "Please allow location access to check in.";
+                
+                errDiv.textContent = msg;
+                errDiv.classList.remove('hidden');
+                btn.disabled = false;
+                btn.classList.remove('opacity-70');
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+    });
+</script>
+
+<%- include('partials/footer') %>

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= locals.title ? title : 'CampusFlow' %></title>
+    <!-- Include Tailwind CSS via CDN for Level 2 Advanced Styling requirement -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Level 1: Inline/Basic styles and Transitions */
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen text-gray-800 font-sans flex flex-col">
+    <!-- Navbar -->
+    <nav class="bg-blue-600 shadow-md text-white px-6 py-4">
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <a href="/" class="text-2xl font-bold tracking-tight">CampusFlow</a>
+            <div class="space-x-4 flex items-center">
+                <a href="/" class="hover:text-blue-200 transition">Home</a>
+                <a href="/announcements" class="hover:text-blue-200 transition font-medium">Announcements</a>
+                <% if (locals.user) { %>
+                    <a href="/queues" class="hover:text-blue-200 transition font-medium">Virtual Queues</a>
+                    <a href="/marketplace" class="hover:text-blue-200 transition font-medium">Marketplace</a>
+                    <a href="/lost-and-found" class="hover:text-blue-200 transition font-medium">Lost & Found</a>
+                    <a href="/attendance" class="hover:text-blue-200 transition font-medium">Smart Attendance</a>
+                    <a href="/complaints" class="hover:text-blue-200 transition font-medium">Dashboard</a>
+                    <span class="text-blue-300 text-sm border-l border-blue-400 pl-4 ml-4">Role: <%= user.role %></span>
+                    <a href="/logout" class="ml-4 bg-white text-blue-600 px-3 py-1 rounded-md text-sm font-bold hover:bg-gray-100 transition shadow-sm">Log Out</a>
+                <% } else { %>
+                    <a href="/login" class="bg-white text-blue-600 px-4 py-1.5 rounded-md font-bold hover:bg-gray-100 transition shadow-sm">Sign In</a>
+                <% } %>
+            </div>
+        </div>
+    </nav>
+    <main class="flex-grow">

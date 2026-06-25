@@ -1,0 +1,40 @@
+<%- include('partials/header') %>
+
+<main class="max-w-6xl mx-auto px-6 py-8">
+    <div class="flex justify-between items-center mb-8">
+        <div>
+            <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">Campus Announcements</h1>
+            <p class="text-sm text-gray-500 mt-1">Stay updated with the latest news, events, and notices.</p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <% if (announcements.length === 0) { %>
+            <div class="col-span-full bg-white rounded-lg shadow-sm p-10 text-center border border-gray-100">
+                <p class="text-gray-500 text-lg">No announcements available at the moment.</p>
+            </div>
+        <% } else { %>
+            <% announcements.forEach(a => { %>
+                <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition duration-200 overflow-hidden border border-gray-100 flex flex-col">
+                    <div class="px-6 py-4 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
+                        <span class="px-2.5 py-1 text-xs font-bold uppercase tracking-wider rounded-full 
+                            <%= a.type === 'Notice' ? 'bg-blue-100 text-blue-800' : 
+                                a.type === 'Alert' ? 'bg-red-100 text-red-800' : 
+                                'bg-green-100 text-green-800' %>">
+                            <%= a.type %>
+                        </span>
+                        <span class="text-xs text-gray-400 font-medium">
+                            <%= new Date(a.datePosted).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) %>
+                        </span>
+                    </div>
+                    <div class="p-6 flex-grow">
+                        <h3 class="text-lg font-bold text-gray-900 mb-2"><%= a.title %></h3>
+                        <p class="text-gray-600 text-sm leading-relaxed"><%= a.content %></p>
+                    </div>
+                </div>
+            <% }) %>
+        <% } %>
+    </div>
+</main>
+
+<%- include('partials/footer') %>
