@@ -35,61 +35,26 @@ const getWardenDashboard = async (req, res) => {
     }
 };
 
-const assignComplaint = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { staffId } = req.body;
+const ComplaintService = require('../services/complaint.service');
+const ApiResponse = require('../utils/ApiResponse');
+const asyncHandler = require('../utils/asyncHandler');
 
-        const complaint = await prisma.complaint.update({
-            where: { id },
-            data: { 
-                assignedStaffId: staffId,
-                status: 'ASSIGNED'
-            }
-        });
+const assignComplaint = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { staffId } = req.body;
 
-        // Notify Student
-        await prisma.notification.create({
-            data: {
-                userId: complaint.studentId,
-                title: 'Complaint Assigned',
-                message: `Your complaint "${complaint.title}" has been assigned to a staff member.`,
-                link: '/complaints'
-            }
-        });
+    await ComplaintService.assignComplaint(id, staffId);
 
-        // Notify Staff
-        await prisma.notification.create({
-            data: {
-                userId: staffId,
-                title: 'New Task Assigned',
-                message: `You have been assigned to resolve: "${complaint.title}".`,
-                link: '/staff'
-            }
-        });
+    res.json(new ApiResponse(200, null, 'Staff assigned successfully'));
+});
 
-        res.json({ success: true, message: 'Staff assigned successfully' });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Server Error' });
-    }
-};
-
-const addRemark = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { remark } = req.body;
-        
-        await prisma.complaint.update({
-            where: { id },
-            data: { wardenRemark: remark }
-        });
-        
-        res.json({ success: true, message: 'Remark added successfully' });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Server Error' });
-    }
-};
+const addRemark = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { remark } = req.body;
+    
+    await ComplaintService.addRemark(id, remark);
+    
+    res.json(new ApiResponse(200, null, 'Remark added successfully'));
+});
 
 module.exports = { getWardenDashboard, assignComplaint, addRemark };

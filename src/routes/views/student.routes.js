@@ -4,43 +4,22 @@ const { authenticateToken, checkUserContext, checkSubscription } = require('../.
 const { getAttendancePage } = require('../../controllers/attendanceController');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const ComplaintService = require('../../services/complaint.service');
 
 router.get('/onboarding', (req, res) => res.render('onboarding'));
 router.get('/upgrade-required', (req, res) => res.render('upgrade-required'));
 router.get('/attendance', authenticateToken, getAttendancePage);
 
-router.get('/complaints', authenticateToken, async (req, res) => {
+router.get('/complaints', authenticateToken, async (req, res, next) => {
     try {
         if (req.user.role === 'SUPER_ADMIN') return res.redirect('/superadmin');
         if (req.user.role === 'ADMIN') return res.redirect('/admin');
 
-        const institutionId = req.user.institutionId;
-        const studentId = req.user.id;
+        const { categories, buildings, complaints } = await ComplaintService.getStudentComplaintsData(req.user.institutionId, req.user.id);
 
-        const categories = await prisma.category.findMany({ where: { institutionId } });
-        const buildings = await prisma.building.findMany({ where: { institutionId } });
-        
-        const complaints = await prisma.complaint.findMany({
-            where: { institutionId, studentId },
-            include: { category: true, building: true },
-            orderBy: { createdAt: 'desc' }
-        });
-
-        const mappedComplaints = complaints.map(c => ({
-            id: c.id.substring(0, 8),
-            fullId: c.id,
-            title: c.title,
-            category: c.category.name,
-            building: c.building.name,
-            roomNumber: c.roomNumber,
-            status: c.status,
-            createdAt: c.createdAt
-        }));
-
-        res.render('complaints', { title: 'My Complaints', categories, buildings, complaints: mappedComplaints });
+        res.render('complaints', { title: 'My Complaints', categories, buildings, complaints });
     } catch (error) {
-        console.error(error);
-        res.status(500).send("Server Error");
+        next(error);
     }
 });
 
