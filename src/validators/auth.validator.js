@@ -10,7 +10,7 @@ const authValidator = {
     name: requiredString,
     email,
     password,
-    role: requiredString
+    institutionId: requiredString
   })
 };
 

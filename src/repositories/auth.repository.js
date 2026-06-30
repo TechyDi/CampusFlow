@@ -1,20 +1,35 @@
-/**
- * AuthRepository
- * 
- * Responsibility: Handles data access related to authentication tokens, sessions, and secure credential checks.
- * 
- * Purpose: 
- * This layer isolates the application from the underlying database (Prisma). 
- * By placing all Prisma queries here in future phases, the Service Layer 
- * can perform business logic purely by calling `repository.findUser()` 
- * without caring if the data comes from SQLite, PostgreSQL, or a cache.
- */
-
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 class AuthRepository {
-    // Methods will be extracted from controllers in Phase 3
+    async findUserByEmail(email) {
+        return await prisma.user.findUnique({ where: { email } });
+    }
+
+    async createUser(data) {
+        return await prisma.user.create({ data });
+    }
+
+    async findInstitutionsForSignup() {
+        return await prisma.institution.findMany({
+            where: {
+                name: {
+                    notIn: ['CampusFlow HQ', 'CAMPUSFLOW HQ', 'Campusflow HQ']
+                }
+            },
+            select: { id: true, name: true }
+        });
+    }
+
+    async findAdminsForInstitution(institutionId) {
+        return await prisma.user.findMany({
+            where: { institutionId, role: 'ADMIN' }
+        });
+    }
+
+    async createNotifications(data) {
+        return await prisma.notification.createMany({ data });
+    }
 }
 
 module.exports = new AuthRepository();
