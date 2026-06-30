@@ -169,6 +169,16 @@ const messageSeller = async (req, res) => {
             }
         });
 
+        // Notify Seller
+        await prisma.notification.create({
+            data: {
+                userId: item.studentId,
+                title: 'New Marketplace Message',
+                message: `You received a message regarding "${item.title}".`,
+                link: '/marketplace'
+            }
+        });
+
         res.status(200).json({ success: true, message: 'Message sent' });
     } catch (error) {
         console.error(error);

@@ -1,6 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { GoogleGenAI } = require('@google/genai');
+const { detectDuplicateComplaint } = require('../services/aiService');
 
 // AI Initialization
 let ai;
@@ -47,10 +48,10 @@ async function categorizeWithAI(description) {
 }
 
 const createComplaint = async (req, res) => {
-    const { title, building, description } = req.body;
+    const { title, buildingId, room, description } = req.body;
 
-    if (!title || !building || !description) {
-        return res.status(400).json({ error: 'All fields are required' });
+    if (!title || !buildingId || !description) {
+        return res.status(400).json({ error: 'Title, Building, and Description are required' });
     }
 
     try {
@@ -60,17 +61,31 @@ const createComplaint = async (req, res) => {
         const autoCategory = await categorizeWithAI(description);
         
         let catRecord = await prisma.category.findFirst({ where: { name: autoCategory, institutionId } });
-        let bldRecord = await prisma.building.findFirst({ where: { name: building, institutionId } });
+        let bldRecord = await prisma.building.findUnique({ where: { id: buildingId } });
 
         if (!bldRecord) {
-            bldRecord = await prisma.building.create({
-                data: { institutionId, name: building, type: 'Hostel' }
-            });
+            return res.status(400).json({ error: 'Selected building does not exist' });
         }
         
         if (!catRecord) {
             catRecord = await prisma.category.findFirst({ where: { institutionId } });
         }
+
+        // --- Duplicate Detection ---
+        const recentComplaints = await prisma.complaint.findMany({
+            where: {
+                buildingId: bldRecord.id,
+                status: { in: ['OPEN', 'ASSIGNED', 'IN_PROGRESS'] },
+                masterComplaintId: null // Only compare against master complaints
+            },
+            take: 10,
+            orderBy: { createdAt: 'desc' }
+        });
+
+        const duplicateId = await detectDuplicateComplaint(
+            { title, description },
+            recentComplaints
+        );
 
         const newComplaint = await prisma.complaint.create({
             data: {
@@ -78,10 +93,12 @@ const createComplaint = async (req, res) => {
                 studentId,
                 categoryId: catRecord.id,
                 buildingId: bldRecord.id,
+                roomNumber: room || null,
                 title,
                 description,
                 status: 'OPEN',
-                aiTags: autoCategory
+                aiTags: autoCategory,
+                masterComplaintId: duplicateId || null
             },
             include: { category: true, building: true }
         });
@@ -91,6 +108,7 @@ const createComplaint = async (req, res) => {
             title: newComplaint.title,
             category: newComplaint.category.name,
             building: newComplaint.building.name,
+            roomNumber: newComplaint.roomNumber,
             status: newComplaint.status,
             createdAt: newComplaint.createdAt,
             aiCategorized: true

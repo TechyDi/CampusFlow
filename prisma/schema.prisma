@@ -43,6 +43,7 @@ model User {
   role           String   @default("STUDENT") // STUDENT, FACULTY, STAFF, ADMIN, SUPER_ADMIN
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+  isApproved     Boolean  @default(false)
 
   // Relations
   institution    Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
@@ -56,6 +57,8 @@ model User {
   attendance     AttendanceRecord[]
   messagesSent   Message[]    @relation("SenderRelation")
   messagesRcvd   Message[]    @relation("ReceiverRelation")
+  notifications  Notification[] @relation("UserNotifications")
+  taughtCourses  Course[]     @relation("FacultyCourses")
 }
 
 model Building {
@@ -96,6 +99,7 @@ model Complaint {
   description     String         
   status          String         @default("OPEN") // OPEN, ASSIGNED, IN_PROGRESS, RESOLVED, CLOSED
   assignedStaffId String?
+  wardenRemark    String?        // Optional remark from Warden
   aiTags          String?        // JSON or comma separated string for AI categorization
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
@@ -107,6 +111,10 @@ model Complaint {
   building        Building       @relation(fields: [buildingId], references: [id])
   assignedStaff   User?          @relation("StaffAssignments", fields: [assignedStaffId], references: [id])
   logs            ComplaintLog[]
+
+  masterComplaintId String?
+  masterComplaint   Complaint?   @relation("ComplaintGroup", fields: [masterComplaintId], references: [id])
+  subComplaints     Complaint[]  @relation("ComplaintGroup")
 }
 
 model ComplaintLog {
@@ -223,10 +231,12 @@ model Message {
 model Course {
   id            String   @id @default(uuid())
   institutionId String
+  facultyId     String
   code          String   // e.g. "CS101"
   name          String   // e.g. "Intro to Computer Science"
   
   institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  faculty       User        @relation("FacultyCourses", fields: [facultyId], references: [id])
   sessions      AttendanceSession[]
 }
 
@@ -236,6 +246,8 @@ model AttendanceSession {
   date          DateTime @default(now())
   checkInCode   String   @unique // The randomized code (can be embedded in QR)
   isActive      Boolean  @default(true)
+  expiresAt     DateTime?
+
   
   // Geofencing data (where the class is located)
   latitude      Float?
@@ -260,4 +272,20 @@ model AttendanceRecord {
   student       User              @relation(fields: [studentId], references: [id], onDelete: Cascade)
   
   @@unique([sessionId, studentId]) // Prevent duplicate check-ins
+}
+
+// ----------------------------------------------------------------------
+// NOTIFICATION MODULE (Phase 16)
+// ----------------------------------------------------------------------
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  link      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user      User     @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
 }

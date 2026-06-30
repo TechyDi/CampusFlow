@@ -13,7 +13,7 @@
             </div>
         <% } else { %>
             <% queues.forEach(q => { %>
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden fade-in flex flex-col">
+                <div class="bg-white rounded-2xl shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-gray-100 overflow-hidden fade-in flex flex-col">
                     <div class="px-5 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
                         <h3 class="font-bold text-gray-900"><%= q.name %></h3>
                         <% if(q.isOpen) { %>

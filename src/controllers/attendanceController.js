@@ -25,13 +25,19 @@ const getAttendancePage = async (req, res) => {
         const institutionId = req.user.institutionId;
         
         // Find all active sessions for courses in the student's institution
-        const activeSessions = await prisma.attendanceSession.findMany({
+        let activeSessions = await prisma.attendanceSession.findMany({
             where: {
                 isActive: true,
                 course: { institutionId }
             },
             include: { course: true },
             orderBy: { date: 'desc' }
+        });
+
+        // Filter out expired ones
+        activeSessions = activeSessions.filter(s => {
+            if (!s.expiresAt) return true;
+            return new Date() <= s.expiresAt;
         });
 
         // Get past attendance for this student
@@ -74,6 +80,10 @@ const checkIn = async (req, res) => {
 
         if (!session || !session.isActive) {
             return res.status(404).json({ error: 'Invalid or inactive check-in code.' });
+        }
+
+        if (session.expiresAt && new Date() > session.expiresAt) {
+            return res.status(403).json({ error: 'This attendance session has expired.' });
         }
 
         // Check if student belongs to same institution

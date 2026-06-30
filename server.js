@@ -10,13 +10,47 @@ const os = require('os');
 const compression = require('compression');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const { startEscalationJob } = require('./src/jobs/escalationJob');
 
 const numCPUs = os.cpus().length;
 const PORT = process.env.PORT || 3000;
 
-if (cluster.isMaster) {
+if (cluster.isPrimary) {
     console.log(`Master process ${process.pid} is running`);
     
+    // Start background jobs ONLY on the master node
+    startEscalationJob();
+
+    // Init Super Admin
+    const { PrismaClient } = require('@prisma/client');
+    const bcrypt = require('bcrypt');
+    async function initSuperAdmin() {
+        const email = process.env.SUPER_ADMIN_EMAIL;
+        const password = process.env.SUPER_ADMIN_PASSWORD;
+        if (email && password) {
+            const prisma = new PrismaClient();
+            try {
+                const pwdHash = await bcrypt.hash(password, 10);
+                const inst = await prisma.institution.upsert({
+                    where: { subdomain: 'hq' },
+                    update: {},
+                    create: { name: 'CampusFlow HQ', subdomain: 'hq', subscriptionPlan: 'ENTERPRISE' }
+                });
+                await prisma.user.upsert({
+                    where: { email },
+                    update: { role: 'SUPER_ADMIN', passwordHash: pwdHash, institutionId: inst.id, isApproved: true },
+                    create: { email, name: 'Super Admin', role: 'SUPER_ADMIN', passwordHash: pwdHash, institutionId: inst.id, isApproved: true }
+                });
+                console.log('Super Admin secured via environment variables.');
+            } catch (e) {
+                console.error('Failed to init Super Admin:', e);
+            } finally {
+                await prisma.$disconnect();
+            }
+        }
+    }
+    initSuperAdmin();
+
     // Fork workers.
     for (let i = 0; i < numCPUs; i++) {
         cluster.fork();
