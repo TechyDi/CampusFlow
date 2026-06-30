@@ -1,0 +1,8 @@
+module.exports = {
+  STUDENT: 'STUDENT',
+  FACULTY: 'FACULTY',
+  STAFF: 'STAFF',
+  WARDEN: 'WARDEN',
+  ADMIN: 'ADMIN',
+  SUPER_ADMIN: 'SUPER_ADMIN'
+};
