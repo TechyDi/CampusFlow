@@ -1,6 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
-const { sendResolutionEmail } = require('../services/emailService');
 
 const getStaffDashboard = async (req, res) => {
     try {
