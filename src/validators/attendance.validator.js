@@ -2,9 +2,10 @@ const Joi = require('joi');
 const { requiredString, id } = require('./common.validator');
 
 const attendanceValidator = {
-  mark: Joi.object({
-    studentId: id,
-    status: requiredString.valid('PRESENT', 'ABSENT', 'LATE', 'EXCUSED')
+  checkIn: Joi.object({
+    checkInCode: requiredString,
+    lat: Joi.number().optional(),
+    lng: Joi.number().optional()
   })
 };
 

@@ -1,189 +1,55 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const MarketplaceService = require('../services/marketplace.service');
+const ApiResponse = require('../utils/ApiResponse');
+const asyncHandler = require('../utils/asyncHandler');
+const marketplaceValidator = require('../validators/marketplace.validator');
+const AppError = require('../utils/AppError');
 
-const createListing = async (req, res) => {
-    const { title, description, price, condition, contactInfo } = req.body;
-    let imageUrls = [];
-
-    if (req.files && req.files.length > 0) {
-        imageUrls = req.files.map(file => '/uploads/' + file.filename);
+const createListing = asyncHandler(async (req, res, next) => {
+    const { error } = marketplaceValidator.listing.validate(req.body);
+    if (error) {
+        return next(new AppError(400, error.details[0].message));
     }
 
-    if (!title || !description || !price || !condition || !contactInfo) {
-        return res.status(400).json({ error: 'All text fields are required' });
-    }
-
-    try {
-        const institutionId = req.user.institutionId;
-        const studentId = req.user.id;
-
-        const newItem = await prisma.marketItem.create({
-            data: {
-                institutionId,
-                studentId,
-                title,
-                description,
-                price: parseFloat(price),
-                condition,
-                contactInfo,
-                imageUrls: JSON.stringify(imageUrls),
-                status: 'AVAILABLE'
-            }
-        });
-
-        res.status(201).json({ success: true, item: newItem });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Server error' });
-    }
-};
-
-const markAsSold = async (req, res) => {
-    try {
-        const itemId = req.params.id;
-        const studentId = req.user.id;
-
-        const item = await prisma.marketItem.findUnique({ where: { id: itemId } });
-        
-        if (!item) return res.status(404).json({ error: 'Item not found' });
-        
-        // Only allow the original seller to mark as sold manually (if they sold it elsewhere)
-        if (item.studentId !== studentId) return res.status(403).json({ error: 'Unauthorized' });
-
-        await prisma.marketItem.update({
-            where: { id: itemId },
-            data: { status: 'SOLD' }
-        });
-
-        res.status(200).json({ success: true, message: 'Item marked as sold and buyer recorded' });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Server error' });
-    }
-};
-
-const editListing = async (req, res) => {
-    const itemId = req.params.id;
-    const { title, description, price, condition, contactInfo } = req.body;
+    const institutionId = req.user.institutionId;
     const studentId = req.user.id;
 
-    try {
-        const item = await prisma.marketItem.findUnique({ where: { id: itemId } });
-        if (!item) return res.status(404).json({ error: 'Item not found' });
-        if (item.studentId !== studentId) return res.status(403).json({ error: 'Unauthorized' });
+    const newItem = await MarketplaceService.createListing(institutionId, studentId, req.body, req.files);
+    res.status(201).json(new ApiResponse(201, { item: newItem }, 'Listing created successfully'));
+});
 
-        const updateData = {
-            title, description, price: parseFloat(price), condition, contactInfo
-        };
+const markAsSold = asyncHandler(async (req, res) => {
+    await MarketplaceService.markAsSold(req.params.id, req.user.id);
+    res.status(200).json(new ApiResponse(200, null, 'Item marked as sold and buyer recorded'));
+});
 
-        if (req.files && req.files.length > 0) {
-            updateData.imageUrls = JSON.stringify(req.files.map(f => '/uploads/' + f.filename));
-        }
-
-        const updatedItem = await prisma.marketItem.update({
-            where: { id: itemId },
-            data: updateData
-        });
-
-        res.status(200).json({ success: true, item: updatedItem });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Server error' });
+const editListing = asyncHandler(async (req, res, next) => {
+    const { error } = marketplaceValidator.listing.validate(req.body);
+    if (error) {
+        return next(new AppError(400, error.details[0].message));
     }
-};
 
-const deleteListing = async (req, res) => {
-    const itemId = req.params.id;
-    const studentId = req.user.id;
+    const updatedItem = await MarketplaceService.editListing(req.params.id, req.user.id, req.body, req.files);
+    res.status(200).json(new ApiResponse(200, { item: updatedItem }, 'Listing updated successfully'));
+});
 
-    try {
-        const item = await prisma.marketItem.findUnique({ where: { id: itemId } });
-        if (!item) return res.status(404).json({ error: 'Item not found' });
-        if (item.studentId !== studentId) return res.status(403).json({ error: 'Unauthorized' });
+const deleteListing = asyncHandler(async (req, res) => {
+    await MarketplaceService.deleteListing(req.params.id, req.user.id);
+    res.status(200).json(new ApiResponse(200, null, 'Item deleted'));
+});
 
-        await prisma.marketItem.delete({ where: { id: itemId } });
+const buyItem = asyncHandler(async (req, res) => {
+    const sellerContact = await MarketplaceService.buyItem(req.params.id, req.user.id);
+    res.status(200).json(new ApiResponse(200, { sellerContact }, 'You have successfully claimed this item!'));
+});
 
-        res.status(200).json({ success: true, message: 'Item deleted' });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Server error' });
+const messageSeller = asyncHandler(async (req, res, next) => {
+    const { error } = marketplaceValidator.message.validate(req.body);
+    if (error) {
+        return next(new AppError(400, error.details[0].message));
     }
-};
 
-const buyItem = async (req, res) => {
-    try {
-        const itemId = req.params.id;
-        const buyerId = req.user.id;
-
-        const item = await prisma.marketItem.findUnique({ 
-            where: { id: itemId },
-            include: { seller: true }
-        });
-        
-        if (!item) return res.status(404).json({ error: 'Item not found' });
-        
-        if (item.status !== 'AVAILABLE') return res.status(400).json({ error: 'Item is no longer available' });
-        
-        if (item.studentId === buyerId) return res.status(400).json({ error: 'You cannot buy your own item' });
-
-        const updatedItem = await prisma.marketItem.update({
-            where: { id: itemId },
-            data: { 
-                status: 'SOLD',
-                buyerId: buyerId
-            }
-        });
-
-        res.status(200).json({ 
-            success: true, 
-            message: 'You have successfully claimed this item!',
-            sellerContact: item.contactInfo
-        });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Server error' });
-    }
-};
-
-const messageSeller = async (req, res) => {
-    try {
-        const itemId = req.params.id;
-        const buyerId = req.user.id;
-        const { message } = req.body;
-
-        if (!message) return res.status(400).json({ error: 'Message is required' });
-
-        const item = await prisma.marketItem.findUnique({ 
-            where: { id: itemId },
-            include: { seller: true }
-        });
-        
-        if (!item) return res.status(404).json({ error: 'Item not found' });
-        if (item.studentId === buyerId) return res.status(400).json({ error: 'You cannot message yourself' });
-
-        await prisma.message.create({
-            data: {
-                senderId: buyerId,
-                receiverId: item.studentId,
-                content: `Regarding "${item.title}": ${message}`
-            }
-        });
-
-        // Notify Seller
-        await prisma.notification.create({
-            data: {
-                userId: item.studentId,
-                title: 'New Marketplace Message',
-                message: `You received a message regarding "${item.title}".`,
-                link: '/marketplace'
-            }
-        });
-
-        res.status(200).json({ success: true, message: 'Message sent' });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Server error' });
-    }
-};
+    await MarketplaceService.messageSeller(req.params.id, req.user.id, req.body.message);
+    res.status(200).json(new ApiResponse(200, null, 'Message sent'));
+});
 
 module.exports = { createListing, markAsSold, buyItem, editListing, deleteListing, messageSeller };

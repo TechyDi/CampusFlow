@@ -1,20 +1,36 @@
-/**
- * MarketplaceRepository
- * 
- * Responsibility: Manages market listings, item sales, and buyer-seller messages.
- * 
- * Purpose: 
- * This layer isolates the application from the underlying database (Prisma). 
- * By placing all Prisma queries here in future phases, the Service Layer 
- * can perform business logic purely by calling `repository.findUser()` 
- * without caring if the data comes from SQLite, PostgreSQL, or a cache.
- */
-
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 class MarketplaceRepository {
-    // Methods will be extracted from controllers in Phase 3
+    async createItem(data) {
+        return await prisma.marketItem.create({ data });
+    }
+
+    async findItemById(id) {
+        return await prisma.marketItem.findUnique({ 
+            where: { id },
+            include: { seller: true }
+        });
+    }
+
+    async updateItem(id, data) {
+        return await prisma.marketItem.update({
+            where: { id },
+            data
+        });
+    }
+
+    async deleteItem(id) {
+        return await prisma.marketItem.delete({ where: { id } });
+    }
+
+    async createMessage(data) {
+        return await prisma.message.create({ data });
+    }
+
+    async createNotification(data) {
+        return await prisma.notification.create({ data });
+    }
 }
 
 module.exports = new MarketplaceRepository();
