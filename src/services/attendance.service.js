@@ -1,6 +1,6 @@
 const AttendanceRepository = require('../repositories/attendance.repository');
 const AppError = require('../utils/AppError');
-const logger = require('../logger');
+const { logger } = require('../logger');
 
 function calculateDistance(lat1, lon1, lat2, lon2) {
     if (!lat1 || !lon1 || !lat2 || !lon2) return Infinity; 

@@ -1,6 +1,6 @@
 const ComplaintRepository = require('../repositories/complaint.repository');
 const AppError = require('../utils/AppError');
-const logger = require('../logger');
+const { logger } = require('../logger');
 const { GoogleGenAI } = require('@google/genai');
 const { detectDuplicateComplaint } = require('./aiService');
 const { sendResolutionEmail } = require('./emailService');

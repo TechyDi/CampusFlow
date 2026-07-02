@@ -1,6 +1,6 @@
 const MarketplaceRepository = require('../repositories/marketplace.repository');
 const AppError = require('../utils/AppError');
-const logger = require('../logger');
+const { logger } = require('../logger');
 
 class MarketplaceService {
     async createListing(institutionId, studentId, data, files) {
