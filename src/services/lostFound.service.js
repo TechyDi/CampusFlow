@@ -1,22 +1,48 @@
-/**
- * LostFoundService
- * 
- * Responsibility: Manages logic for claiming lost items, resolving matches, and delegates to LostFoundRepository.
- * 
- * Service Coordination Flow:
- * 1. Validation: Expects incoming data to already be validated by Joi middleware.
- * 2. Business Logic: Executes core domain rules (e.g., checking if user has PRO subscription).
- * 3. Repository Calls: Instructs Repositories to fetch/mutate data.
- * 4. Error Handling: Throws AppError for expected failures (e.g., 404 Not Found), which the Global Error Handler catches.
- * 5. Logging: Uses logger to record significant business events.
- */
-
-// const LostFoundRepository = require('../repositories/lostFound.repository.js');
-// const logger = require('../logger');
-// const AppError = require('../utils/AppError');
+const LostFoundRepository = require('../repositories/lostFound.repository');
+const AppError = require('../utils/AppError');
+const { logger } = require('../logger');
 
 class LostFoundService {
-    // Methods will be extracted from controllers in Phase 3
+    async createLostItem(institutionId, studentId, data, files) {
+        let imageUrls = [];
+        if (files && files.length > 0) {
+            imageUrls = files.map(file => '/uploads/' + file.filename);
+        }
+
+        const newItem = await LostFoundRepository.createItem({
+            institutionId,
+            studentId,
+            type: data.type,
+            itemName: data.itemName,
+            description: data.description,
+            location: data.location,
+            imageUrls: JSON.stringify(imageUrls),
+            status: 'ACTIVE'
+        });
+
+        logger.info(`Lost and Found item created`, { category: logger.categories.HTTP, itemId: newItem.id });
+        
+        return {
+            id: newItem.id.substring(0, 8),
+            type: newItem.type,
+            itemName: newItem.itemName,
+            description: newItem.description,
+            location: newItem.location,
+            dateReported: newItem.dateReported,
+            status: newItem.status,
+            reporter: newItem.student.name
+        };
+    }
+
+    async resolveLostItem(itemId, studentId) {
+        const item = await LostFoundRepository.findItemById(itemId);
+        
+        if (!item) throw new AppError(404, 'Item not found');
+        if (item.studentId !== studentId) throw new AppError(403, 'Unauthorized');
+
+        await LostFoundRepository.updateItem(itemId, { status: 'RESOLVED' });
+        logger.info(`Lost and Found item resolved`, { category: logger.categories.HTTP, itemId });
+    }
 }
 
 module.exports = new LostFoundService();

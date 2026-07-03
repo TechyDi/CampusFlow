@@ -5,7 +5,8 @@ const complaintValidator = {
   create: Joi.object({
     title: requiredString,
     description: requiredString,
-    category: requiredString
+    buildingId: requiredString,
+    room: requiredString
   }),
   updateStatus: Joi.object({
     status: requiredString.valid('OPEN', 'ASSIGNED', 'IN_PROGRESS', 'RESOLVED', 'CLOSED')
