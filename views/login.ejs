@@ -78,6 +78,12 @@
                     window.location.href = '/superadmin';
                 } else if (data.role === 'ADMIN') {
                     window.location.href = '/admin';
+                } else if (data.role === 'WARDEN') {
+                    window.location.href = '/warden';
+                } else if (data.role === 'STAFF') {
+                    window.location.href = '/staff';
+                } else if (data.role === 'FACULTY') {
+                    window.location.href = '/faculty';
                 } else {
                     window.location.href = '/complaints';
                 }

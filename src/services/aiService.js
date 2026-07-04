@@ -40,7 +40,7 @@ If NO, output "NO".
             }
         });
 
-        const result = response.text().trim();
+        const result = (response.text || '').trim();
         
         if (result === 'NO' || !result) {
             return null;
